@@ -1,0 +1,6 @@
+{
+  "server": "http://localhost:3000",
+  "defaultApp": "myapp",
+  "bundleId": "com.example.myapp",
+  "appName": "My App"
+}

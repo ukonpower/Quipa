@@ -1,0 +1,23 @@
+{
+  "name": "quipa",
+  "version": "1.0.0",
+  "description": "EAS BuildしたIPAをTestFlight経由せずに直接配信する開発用OTAシステム",
+  "private": true,
+  "workspaces": [
+    "server",
+    "cli"
+  ],
+  "scripts": {
+    "server": "npm run start --workspace=server",
+    "cli": "npm run start --workspace=cli",
+    "dev": "npm run server"
+  },
+  "keywords": [
+    "ios",
+    "ipa",
+    "ota",
+    "distribution"
+  ],
+  "author": "",
+  "license": "MIT"
+}
