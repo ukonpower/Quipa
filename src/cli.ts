@@ -14,7 +14,6 @@ program
   .option('--bundle-id <id>', 'Bundle ID（IPAから自動取得する場合は不要）')
   .option('--app-name <name>', 'アプリ名（IPAから自動取得する場合は不要）')
   .option('--version <version>', 'バージョン（IPAから自動取得する場合は不要）')
-  .option('--qr', 'インストールURLのQRコードを表示')
   .action(async (options) => {
     try {
       console.log(chalk.cyan('🚀 Quipa Server を起動中...'));
@@ -71,13 +70,6 @@ program
       console.log(chalk.green(`\n✓ サーバー起動完了！`));
       console.log(chalk.cyan('\n📱 インストールURL:'));
       console.log(chalk.white(`   ${baseUrl}`));
-
-      // QRコード表示（オプション指定時）
-      if (options.qr) {
-        const qrcode = await import('qrcode-terminal');
-        console.log(chalk.cyan('\n📱 QRコード:'));
-        qrcode.generate(baseUrl, { small: true });
-      }
 
       console.log(chalk.gray('\nサーバーを停止するには Ctrl+C を押してください\n'));
     } catch (error) {

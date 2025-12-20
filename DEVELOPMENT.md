@@ -92,7 +92,6 @@ npm run package:macos
 - **ngrok**: HTTPS トンネリング
 - **yauzl**: ZIP（IPA）ファイル解析
 - **plist**: plist ファイルのパース
-- **qrcode-terminal**: QR コード生成
 - **chalk**: ターミナル出力の装飾
 
 ## アーキテクチャ
