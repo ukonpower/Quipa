@@ -1,58 +1,70 @@
-# Quipa - シンプルなIPA配信CLIツール
+# Quipa
 
-IPAファイルを配置して `quip serve` を実行するだけで、iOS OTA配信が可能になるシンプルなCLIツール。
+iOS アプリ（IPA ファイル）を簡単に配信できる CLI ツール
+
+IPA ファイルを置いて `quip serve` を実行するだけで、iOS デバイスにアプリを OTA（Over-The-Air）インストールできます。
 
 ## 特徴
 
-- **ゼロコンフィグ**: IPAファイルを自動検出し、メタデータを自動抽出
-- **ワンコマンド**: `quip serve` だけで起動
-- **ngrok統合**: `--ngrok` オプションでHTTPS化を自動実行
-- **QRコード表示**: `--qr` オプションでインストールURLをQRコードで表示
+- **ゼロコンフィグ**: IPA ファイルを自動検出し、必要な情報を自動で抽出
+- **ワンコマンド**: `quip serve` だけで配信サーバーを起動
+- **ngrok 統合**: `--ngrok` オプションで HTTPS 化を自動実行
+- **QR コード表示**: `--qr` オプションでインストール URL を QR コード表示
 
 ## インストール
 
 ```bash
-npm install
-npm run build
-npm link  # グローバルにquipコマンドをインストール
+npm install -g quipa
 ```
 
-## 使用方法
+または、ソースからビルドする場合：
 
-### 基本的な使い方
+```bash
+git clone https://github.com/yourusername/quipa.git
+cd quipa
+npm install
+npm run build
+npm link
+```
 
-1. IPAファイルをプロジェクトディレクトリに配置
-2. `quip serve` を実行
+## 使い方
+
+### 基本の使い方
+
+1. IPA ファイルを任意のディレクトリに配置
+2. そのディレクトリで `quip serve` を実行
 
 ```bash
 quip serve
 ```
 
 これだけで、以下が自動的に実行されます：
-- IPAファイルの検出
-- Info.plistからメタデータ抽出（Bundle ID、アプリ名、バージョン）
-- manifest.plistの自動生成
-- HTTPサーバーの起動
+- IPA ファイルの検出
+- Info.plist からメタデータ抽出（Bundle ID、アプリ名、バージョン）
+- manifest.plist の自動生成
+- HTTP サーバーの起動
 
-### ngrokでHTTPS化（推奨）
+ターミナルに表示される URL にアクセスすると、インストールページが開きます。
 
-iOS OTAインストールはHTTPS必須のため、ngrokを使用します：
+### HTTPS 化（推奨）
+
+iOS の OTA インストールは HTTPS が必須です。ngrok を使って簡単に HTTPS 化できます：
 
 ```bash
 quip serve --ngrok
 ```
 
-ngrokが自動起動し、HTTPS URLが表示されます。
+ngrok が自動起動し、HTTPS URL が表示されます。この URL を iOS デバイスの Safari で開いてください。
 
-### QRコード表示
+### QR コード表示
 
-インストールURLをQRコードで表示：
+インストール URL を QR コードで表示できます：
 
 ```bash
 quip serve --ngrok --qr
 ```
 
-スマートフォンでQRコードをスキャンすると、インストールページにアクセスできます。
+ターミナルに表示される QR コードをスマートフォンでスキャンすると、インストールページに直接アクセスできます。
 
 ### オプション
 
@@ -60,67 +72,76 @@ quip serve --ngrok --qr
 quip serve [options]
 
 Options:
-  --ipa <path>         IPAファイルのパス（指定しない場合は自動検出）
-  --port <number>      ポート番号 (default: 3000)
-  --bundle-id <id>     Bundle ID（IPAから自動取得する場合は不要）
-  --app-name <name>    アプリ名（IPAから自動取得する場合は不要）
-  --version <version>  バージョン（IPAから自動取得する場合は不要）
-  --ngrok              ngrokを自動起動してHTTPS化
-  --qr                 インストールURLのQRコードを表示
+  --ipa <path>         IPA ファイルのパス（指定しない場合は自動検出）
+  --port <number>      ポート番号 (デフォルト: 3000)
+  --bundle-id <id>     Bundle ID（IPA から自動取得する場合は不要）
+  --app-name <name>    アプリ名（IPA から自動取得する場合は不要）
+  --version <version>  バージョン（IPA から自動取得する場合は不要）
+  --ngrok              ngrok を自動起動して HTTPS 化
+  --qr                 インストール URL の QR コードを表示
   -h, --help           ヘルプを表示
 ```
 
-## プロジェクト構造
+## iOS アプリ配信の要件
 
-```
-quipa/
-├── src/
-│   ├── cli.ts           # CLIエントリーポイント
-│   ├── server.ts        # HTTPサーバー実装
-│   ├── manifest.ts      # manifest.plist生成
-│   ├── ipa.ts           # IPA解析
-│   ├── ngrok.ts         # ngrok統合
-│   └── types/           # 型定義
-├── dist/                # ビルド出力
-└── package.json
-```
+Quipa を使って iOS アプリを配信するには、以下の要件を満たす必要があります：
 
-## 動作要件
+### 証明書とプロビジョニングプロファイル
 
-### iOS配信要件
+以下のいずれかが必要です：
 
-- **Ad Hoc provisioning profile** または **Enterprise証明書** が必要
-- Ad Hocの場合、デバイスのUDIDを事前に登録
-- **HTTPSは必須**（ngrok使用推奨）
-- **Safariからのアクセスが必要**（Chrome等では動作しない）
+- **Ad Hoc 配布用のプロビジョニングプロファイル**
+  - テスト配布に適しています
+  - デバイスの UDID を事前に Apple Developer に登録する必要があります
+  - 最大 100 台まで登録可能
+
+- **Enterprise 証明書**
+  - 社内配布用
+  - Apple Developer Enterprise Program への加入が必要
+
+### アクセス要件
+
+- **HTTPS は必須**: HTTP ではインストールできません（`--ngrok` オプション推奨）
+- **Safari ブラウザ**: Chrome や他のブラウザでは動作しません
 
 ## トラブルシューティング
 
-### インストールできない
-- HTTPSでアクセスしているか確認（ngrokを使用）
-- Safariブラウザでアクセスしているか確認
+### インストールボタンを押しても何も起こらない
 
-### 証明書エラー
-- provisioning profileを確認
-- デバイスのUDIDが登録されているか確認
+- **HTTPS でアクセスしているか確認**
+  `--ngrok` オプションを使用して HTTPS URL でアクセスしてください
 
-### IPAファイルが見つからない
-- カレントディレクトリに.ipaファイルを配置
-- または `--ipa` オプションでパスを指定
+- **Safari ブラウザを使用しているか確認**
+  Chrome や Firefox では OTA インストールは動作しません
 
-## 開発
+### 「App をインストールできません」エラー
+
+- **プロビジョニングプロファイルを確認**
+  IPA に適切なプロビジョニングプロファイルが含まれているか確認してください
+
+- **デバイスの UDID が登録されているか確認**
+  Ad Hoc 配布の場合、インストール先デバイスの UDID が Apple Developer に登録されている必要があります
+
+### 「IPA ファイルが見つかりません」エラー
+
+- カレントディレクトリに `.ipa` ファイルを配置してください
+- または `--ipa` オプションでファイルパスを明示的に指定してください
 
 ```bash
-# 依存関係のインストール
-npm install
-
-# ビルド
-npm run build
-
-# 開発モード（watch）
-npm run dev
+quip serve --ipa /path/to/your/app.ipa --ngrok
 ```
+
+### ngrok が起動しない
+
+- ngrok がインストールされているか確認してください
+- ngrok の認証トークンが設定されているか確認してください
+
+詳細は [ngrok のドキュメント](https://ngrok.com/docs)を参照してください。
 
 ## ライセンス
 
 MIT
+
+## 開発に参加する
+
+開発者向けの情報は [DEVELOPMENT.md](./DEVELOPMENT.md) を参照してください。
