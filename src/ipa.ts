@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import yauzl from 'yauzl';
 import plist from 'plist';
+import bplistParser from 'bplist-parser';
 
 export interface IPAMetadata {
   bundleId: string;
@@ -69,10 +70,21 @@ export async function extractIPAMetadata(ipaPath: string): Promise<IPAMetadata> 
               chunks.push(chunk);
             });
 
-            readStream.on('end', () => {
+            readStream.on('end', async () => {
               try {
-                const plistContent = Buffer.concat(chunks).toString('utf8');
-                const parsed = plist.parse(plistContent) as any;
+                const plistBuffer = Buffer.concat(chunks);
+                let parsed: any;
+
+                // バイナリplistかどうかを判定（先頭が"bplist"で始まる）
+                if (plistBuffer.toString('utf8', 0, 6) === 'bplist') {
+                  // バイナリplist
+                  const result = await bplistParser.parseBuffer(plistBuffer);
+                  parsed = result[0]; // parseBufferは配列を返す
+                } else {
+                  // XMLplist
+                  const plistContent = plistBuffer.toString('utf8');
+                  parsed = plist.parse(plistContent) as any;
+                }
 
                 const metadata: IPAMetadata = {
                   bundleId: parsed.CFBundleIdentifier || '',

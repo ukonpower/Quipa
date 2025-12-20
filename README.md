@@ -8,7 +8,6 @@ IPA ファイルを置いて `quip serve` を実行するだけで、iOS デバ�
 
 - **ゼロコンフィグ**: IPA ファイルを自動検出し、必要な情報を自動で抽出
 - **ワンコマンド**: `quip serve` だけで配信サーバーを起動
-- **ngrok 統合**: `--ngrok` オプションで HTTPS 化を自動実行
 - **QR コード表示**: `--qr` オプションでインストール URL を QR コード表示
 
 ## インストール
@@ -46,25 +45,17 @@ quip serve
 
 ターミナルに表示される URL にアクセスすると、インストールページが開きます。
 
-### HTTPS 化（推奨）
-
-iOS の OTA インストールは HTTPS が必須です。ngrok を使って簡単に HTTPS 化できます：
-
-```bash
-quip serve --ngrok
-```
-
-ngrok が自動起動し、HTTPS URL が表示されます。この URL を iOS デバイスの Safari で開いてください。
-
 ### QR コード表示
 
 インストール URL を QR コードで表示できます：
 
 ```bash
-quip serve --ngrok --qr
+quip serve --qr
 ```
 
 ターミナルに表示される QR コードをスマートフォンでスキャンすると、インストールページに直接アクセスできます。
+
+**注意**: iOS の OTA インストールには HTTPS が必須です。ローカル環境で配信する場合は、別途リバースプロキシや HTTPS トンネルツールを使用して HTTPS 化する必要があります。
 
 ### オプション
 
@@ -77,7 +68,6 @@ Options:
   --bundle-id <id>     Bundle ID（IPA から自動取得する場合は不要）
   --app-name <name>    アプリ名（IPA から自動取得する場合は不要）
   --version <version>  バージョン（IPA から自動取得する場合は不要）
-  --ngrok              ngrok を自動起動して HTTPS 化
   --qr                 インストール URL の QR コードを表示
   -h, --help           ヘルプを表示
 ```
@@ -101,7 +91,7 @@ Quipa を使って iOS アプリを配信するには、以下の要件を満た
 
 ### アクセス要件
 
-- **HTTPS は必須**: HTTP ではインストールできません（`--ngrok` オプション推奨）
+- **HTTPS は必須**: HTTP ではインストールできません（別途リバースプロキシやトンネルツールで HTTPS 化が必要）
 - **Safari ブラウザ**: Chrome や他のブラウザでは動作しません
 
 ## トラブルシューティング
@@ -109,7 +99,7 @@ Quipa を使って iOS アプリを配信するには、以下の要件を満た
 ### インストールボタンを押しても何も起こらない
 
 - **HTTPS でアクセスしているか確認**
-  `--ngrok` オプションを使用して HTTPS URL でアクセスしてください
+  リバースプロキシやトンネルツールを使用して HTTPS URL でアクセスしてください
 
 - **Safari ブラウザを使用しているか確認**
   Chrome や Firefox では OTA インストールは動作しません
@@ -128,15 +118,8 @@ Quipa を使って iOS アプリを配信するには、以下の要件を満た
 - または `--ipa` オプションでファイルパスを明示的に指定してください
 
 ```bash
-quip serve --ipa /path/to/your/app.ipa --ngrok
+quip serve --ipa /path/to/your/app.ipa
 ```
-
-### ngrok が起動しない
-
-- ngrok がインストールされているか確認してください
-- ngrok の認証トークンが設定されているか確認してください
-
-詳細は [ngrok のドキュメント](https://ngrok.com/docs)を参照してください。
 
 ## ライセンス
 

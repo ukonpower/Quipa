@@ -7,7 +7,6 @@ import { IPAMetadata } from './ipa';
 export interface ServerOptions {
   port: number;
   metadata: IPAMetadata;
-  baseUrl?: string; // ngrok使用時に上書き
 }
 
 /**
@@ -36,7 +35,7 @@ export function startServer(options: ServerOptions): Promise<express.Application
     app.get('/manifest.plist', (req, res) => {
       const protocol = req.headers['x-forwarded-proto'] || req.protocol;
       const host = req.headers['x-forwarded-host'] || req.get('host');
-      const baseUrl = options.baseUrl || `${protocol}://${host}`;
+      const baseUrl = `${protocol}://${host}`;
 
       const manifestContent = generateManifest({
         ipaUrl: `${baseUrl}/app.ipa`,
@@ -53,7 +52,7 @@ export function startServer(options: ServerOptions): Promise<express.Application
     app.get('/', (req, res) => {
       const protocol = req.headers['x-forwarded-proto'] || req.protocol;
       const host = req.headers['x-forwarded-host'] || req.get('host');
-      const baseUrl = options.baseUrl || `${protocol}://${host}`;
+      const baseUrl = `${protocol}://${host}`;
       const manifestUrl = `${baseUrl}/manifest.plist`;
 
       res.send(generateInstallPage(options.metadata, manifestUrl));

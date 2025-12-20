@@ -14,7 +14,6 @@ program
   .option('--bundle-id <id>', 'Bundle ID（IPAから自動取得する場合は不要）')
   .option('--app-name <name>', 'アプリ名（IPAから自動取得する場合は不要）')
   .option('--version <version>', 'バージョン（IPAから自動取得する場合は不要）')
-  .option('--ngrok', 'ngrokを自動起動してHTTPS化')
   .option('--qr', 'インストールURLのQRコードを表示')
   .action(async (options) => {
     try {
@@ -62,28 +61,11 @@ program
 
       console.log(chalk.gray(`\nHTTPサーバーを起動中... (port: ${port})`));
 
-      let baseUrl = `http://localhost:${port}`;
-      let httpsUrl: string | undefined;
-
-      // ngrok起動（オプション指定時）
-      if (options.ngrok) {
-        console.log(chalk.gray('ngrokを起動中...'));
-        const { startNgrok } = await import('./ngrok');
-
-        try {
-          httpsUrl = await startNgrok(port);
-          baseUrl = httpsUrl;
-          console.log(chalk.green(`✓ ngrok起動完了: ${httpsUrl}`));
-        } catch (error) {
-          console.error(chalk.red(`❌ ngrok起動失敗: ${error instanceof Error ? error.message : error}`));
-          console.log(chalk.yellow('通常のHTTPサーバーとして起動します'));
-        }
-      }
+      const baseUrl = `http://localhost:${port}`;
 
       await startServer({
         port,
-        metadata: finalMetadata,
-        baseUrl: httpsUrl
+        metadata: finalMetadata
       });
 
       console.log(chalk.green(`\n✓ サーバー起動完了！`));
@@ -95,11 +77,6 @@ program
         const qrcode = await import('qrcode-terminal');
         console.log(chalk.cyan('\n📱 QRコード:'));
         qrcode.generate(baseUrl, { small: true });
-      }
-
-      if (!httpsUrl) {
-        console.log(chalk.gray('\n⚠️  HTTPS化にはngrokが必要です (--ngrokオプション)'));
-        console.log(chalk.gray('   iOS OTAインストールはHTTPSが必須です'));
       }
 
       console.log(chalk.gray('\nサーバーを停止するには Ctrl+C を押してください\n'));
