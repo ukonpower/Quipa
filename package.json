@@ -10,7 +10,14 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "package": "npm run build && pkg . --out-path bin",
+    "package:macos": "npm run build && pkg . --targets node18-macos-x64,node18-macos-arm64 --out-path bin"
+  },
+  "pkg": {
+    "scripts": "dist/**/*.js",
+    "assets": [],
+    "outputPath": "bin"
   },
   "keywords": [
     "ios",
@@ -35,6 +42,7 @@
     "@types/node": "^20.10.5",
     "@types/plist": "^3.0.5",
     "@types/yauzl": "^2.10.3",
+    "pkg": "^5.8.1",
     "typescript": "^5.3.3"
   }
 }
