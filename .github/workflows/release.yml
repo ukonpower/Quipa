@@ -1,0 +1,92 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: macos-arm64
+            target: node18-macos-arm64
+            output_name: quipa-macos-arm64
+          - os: macos-latest
+            platform: macos-x64
+            target: node18-macos-x64
+            output_name: quipa-macos-x64
+          - os: ubuntu-latest
+            platform: linux-x64
+            target: node18-linux-x64
+            output_name: quipa-linux-x64
+          - os: ubuntu-latest
+            platform: linux-arm64
+            target: node18-linux-arm64
+            output_name: quipa-linux-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build:ts
+
+      - name: Build binary
+        run: npx pkg . --targets ${{ matrix.target }} --output ${{ matrix.output_name }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output_name }}
+          path: ${{ matrix.output_name }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from package.json
+        id: package_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.package_version.outputs.version }}
+          name: Release v${{ steps.package_version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/quipa-macos-arm64/quipa-macos-arm64
+            artifacts/quipa-macos-x64/quipa-macos-x64
+            artifacts/quipa-linux-x64/quipa-linux-x64
+            artifacts/quipa-linux-arm64/quipa-linux-arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
