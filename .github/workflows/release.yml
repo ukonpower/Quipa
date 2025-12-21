@@ -8,26 +8,16 @@ on:
 jobs:
   build:
     name: Build ${{ matrix.platform }}
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     strategy:
       matrix:
         include:
-          - os: macos-latest
-            platform: macos-arm64
+          - platform: macos-apple-silicon
             target: node18-macos-arm64
-            output_name: quipa-macos-arm64
-          - os: macos-latest
-            platform: macos-x64
+            output_name: quipa-macos-apple-silicon
+          - platform: macos-intel
             target: node18-macos-x64
-            output_name: quipa-macos-x64
-          - os: ubuntu-latest
-            platform: linux-x64
-            target: node18-linux-x64
-            output_name: quipa-linux-x64
-          - os: ubuntu-latest
-            platform: linux-arm64
-            target: node18-linux-arm64
-            output_name: quipa-linux-arm64
+            output_name: quipa-macos-intel
 
     steps:
       - name: Checkout code
@@ -84,9 +74,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            artifacts/quipa-macos-arm64/quipa-macos-arm64
-            artifacts/quipa-macos-x64/quipa-macos-x64
-            artifacts/quipa-linux-x64/quipa-linux-x64
-            artifacts/quipa-linux-arm64/quipa-linux-arm64
+            artifacts/quipa-macos-apple-silicon/quipa-macos-apple-silicon
+            artifacts/quipa-macos-intel/quipa-macos-intel
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

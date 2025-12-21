@@ -1,6 +1,6 @@
 {
   "name": "quipa",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "シンプルなIPA配信CLIツール - ゼロコンフィグでOTA配信",
   "main": "dist/cli.js",
   "bin": {
@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run build:ts && npm run build:binary",
     "build:ts": "tsc",
-    "build:binary": "mkdir -p bin/arm64 bin/x64 && pkg . --targets node18-macos-arm64 --output bin/arm64/quipa && pkg . --targets node18-macos-x64 --output bin/x64/quipa",
+    "build:binary": "mkdir -p bin/macos/apple-silicon bin/macos/intel && pkg . --targets node18-macos-arm64 --output bin/macos/apple-silicon/quipa && pkg . --targets node18-macos-x64 --output bin/macos/intel/quipa",
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "prepare": "npm run build:ts"
