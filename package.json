@@ -7,17 +7,16 @@
     "quip": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:ts && npm run build:binary",
+    "build:ts": "tsc",
+    "build:binary": "mkdir -p bin/arm64 bin/x64 && pkg . --targets node18-macos-arm64 --output bin/arm64/quipa && pkg . --targets node18-macos-x64 --output bin/x64/quipa",
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
-    "prepare": "npm run build",
-    "package": "npm run build && pkg . --out-path bin",
-    "package:macos": "npm run build && pkg . --targets node18-macos-x64,node18-macos-arm64 --out-path bin"
+    "prepare": "npm run build:ts"
   },
   "pkg": {
     "scripts": "dist/**/*.js",
-    "assets": [],
-    "outputPath": "bin"
+    "assets": []
   },
   "keywords": [
     "ios",
