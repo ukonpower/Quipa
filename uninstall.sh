@@ -1,31 +1,26 @@
 #!/bin/bash
-
 set -e
 
-# 色の定義
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+INSTALL_DIR="$HOME/.local/bin"
+BINARY_NAME="quipa"
+BINARY_PATH="$INSTALL_DIR/$BINARY_NAME"
 
-echo "🗑️  Quipa アンインストールスクリプト"
-echo ""
+echo "🗑️  Uninstalling Quipa..."
 
-# インストール先
-INSTALL_DIR="/usr/local/bin"
-LINK_NAME="quipa"
-LINK_PATH="$INSTALL_DIR/$LINK_NAME"
-
-# シンボリックリンクの存在確認
-if [ ! -L "$LINK_PATH" ]; then
-    echo -e "${YELLOW}⚠️  Quipa はインストールされていません${NC}"
+# バイナリの存在確認
+if [ ! -f "$BINARY_PATH" ]; then
+    echo "⚠️  Quipa is not installed at $BINARY_PATH"
     exit 0
 fi
 
-# シンボリックリンクを削除
-echo "🗑️  シンボリックリンクを削除します..."
-sudo rm "$LINK_PATH"
+# バイナリを削除
+rm "$BINARY_PATH"
+echo "✅ Removed $BINARY_PATH"
 
 echo ""
-echo -e "${GREEN}✅ アンインストール完了！${NC}"
+echo "🎉 Quipa uninstalled successfully!"
+echo ""
+echo "Note: PATH settings in ~/.zshrc or ~/.bash_profile were not removed."
+echo "If you want to remove them, please delete the following line manually:"
+echo '  export PATH="$HOME/.local/bin:$PATH"'
 echo ""

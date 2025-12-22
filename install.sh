@@ -1,66 +1,83 @@
 #!/bin/bash
-
 set -e
 
-# 色の定義
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+INSTALL_DIR="$HOME/.local/bin"
+BINARY_NAME="quipa"
 
-echo "🚀 Quipa インストールスクリプト"
-echo ""
+echo "🚀 Installing Quipa..."
 
-# アーキテクチャを検出
+# プラットフォーム判定
 ARCH=$(uname -m)
 if [ "$ARCH" = "arm64" ]; then
-    BINARY_DIR="arm64"
+    PLATFORM="apple-silicon"
 elif [ "$ARCH" = "x86_64" ]; then
-    BINARY_DIR="x64"
+    PLATFORM="intel"
 else
-    echo -e "${RED}❌ サポートされていないアーキテクチャ: $ARCH${NC}"
+    echo "❌ Unsupported architecture: $ARCH"
     exit 1
 fi
 
-# スクリプトのディレクトリを取得
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BINARY_PATH="$SCRIPT_DIR/bin/$BINARY_DIR/quipa"
+echo "📦 Detected platform: macOS ($PLATFORM)"
 
-# バイナリの存在確認
-if [ ! -f "$BINARY_PATH" ]; then
-    echo -e "${RED}❌ バイナリが見つかりません: $BINARY_PATH${NC}"
-    echo "先に 'npm run build' を実行してください"
+# インストールディレクトリ作成
+mkdir -p "$INSTALL_DIR"
+
+# ダウンロード
+DOWNLOAD_URL="https://github.com/ukonpower/quipa/releases/latest/download/quipa-macos-$PLATFORM.zip"
+echo "⬇️  Downloading from $DOWNLOAD_URL..."
+
+if ! curl -fL "$DOWNLOAD_URL" -o /tmp/quipa.zip; then
+    echo "❌ Failed to download. Please check your internet connection and try again."
     exit 1
 fi
 
-# インストール先
-INSTALL_DIR="/usr/local/bin"
-LINK_NAME="quipa"
+# 解凍してインストール
+echo "📂 Installing to $INSTALL_DIR..."
+unzip -o /tmp/quipa.zip -d /tmp > /dev/null 2>&1
+mv /tmp/quipa "$INSTALL_DIR/$BINARY_NAME"
+chmod +x "$INSTALL_DIR/$BINARY_NAME"
+rm /tmp/quipa.zip
 
-# /usr/local/bin の存在確認
-if [ ! -d "$INSTALL_DIR" ]; then
-    echo "📁 $INSTALL_DIR を作成します..."
-    sudo mkdir -p "$INSTALL_DIR"
+echo "✅ Binary installed to $INSTALL_DIR/$BINARY_NAME"
+
+# PATH設定チェック
+if [[ ":$PATH:" == *":$INSTALL_DIR:"* ]]; then
+    echo "✅ $INSTALL_DIR is already in PATH"
+else
+    echo "⚙️  Adding $INSTALL_DIR to PATH..."
+
+    # zsh用（macOS Catalina以降のデフォルト）
+    if [ -f "$HOME/.zshrc" ] || [ -n "$ZSH_VERSION" ]; then
+        if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.zshrc" 2>/dev/null; then
+            echo '' >> "$HOME/.zshrc"
+            echo '# Added by Quipa installer' >> "$HOME/.zshrc"
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+            echo "✅ Added to ~/.zshrc"
+        fi
+    fi
+
+    # bash用
+    if [ -f "$HOME/.bash_profile" ] || [ -f "$HOME/.bashrc" ]; then
+        TARGET_FILE="$HOME/.bash_profile"
+        [ ! -f "$TARGET_FILE" ] && TARGET_FILE="$HOME/.bashrc"
+
+        if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$TARGET_FILE" 2>/dev/null; then
+            echo '' >> "$TARGET_FILE"
+            echo '# Added by Quipa installer' >> "$TARGET_FILE"
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$TARGET_FILE"
+            echo "✅ Added to $TARGET_FILE"
+        fi
+    fi
+
+    echo ""
+    echo "⚠️  Please run one of the following to update your current shell:"
+    echo "   source ~/.zshrc    # for zsh"
+    echo "   source ~/.bash_profile    # for bash"
+    echo ""
+    echo "Or simply restart your terminal."
 fi
 
-# 既存のシンボリックリンクを削除
-if [ -L "$INSTALL_DIR/$LINK_NAME" ]; then
-    echo "🗑️  既存のシンボリックリンクを削除します..."
-    sudo rm "$INSTALL_DIR/$LINK_NAME"
-fi
-
-# シンボリックリンクを作成
-echo "🔗 シンボリックリンクを作成します..."
-sudo ln -s "$BINARY_PATH" "$INSTALL_DIR/$LINK_NAME"
-
-# 実行権限を確認
-chmod +x "$BINARY_PATH"
-
 echo ""
-echo -e "${GREEN}✅ インストール完了！${NC}"
+echo "🎉 Quipa installed successfully!"
 echo ""
-echo "使い方:"
-echo "  quipa --help"
-echo ""
-echo "アンインストールする場合:"
-echo "  ./uninstall.sh"
-echo ""
+echo "Try running: quipa --help"
