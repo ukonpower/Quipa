@@ -12,6 +12,8 @@ IPA ファイルを置いて `quipa serve` を実行するだけで、iOS デバ
 
 ## インストール
 
+**対応環境**: macOS のみ（Apple Silicon / Intel）
+
 ### インストールスクリプト（推奨）
 
 最新版を GitHub Releases からダウンロードしてインストール：
@@ -42,12 +44,6 @@ chmod +x ~/.local/bin/quipa
 ```bash
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
-```
-
-### npm からインストール
-
-```bash
-npm install -g quipa
 ```
 
 ### アンインストール
