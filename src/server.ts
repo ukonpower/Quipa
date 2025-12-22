@@ -1,6 +1,7 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import escapeHtml from 'escape-html';
 import { generateManifest } from './manifest';
 import { IPAMetadata } from './ipa';
 
@@ -74,7 +75,7 @@ function generateInstallPage(metadata: IPAMetadata, manifestUrl: string): string
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${metadata.appName} - インストール</title>
+  <title>${escapeHtml(metadata.appName)} - インストール</title>
   <style>
     * {
       margin: 0;
@@ -198,21 +199,21 @@ function generateInstallPage(metadata: IPAMetadata, manifestUrl: string): string
 <body>
   <div class="container">
     <div class="icon">📱</div>
-    <h1>${metadata.appName}</h1>
-    <p class="version">Version ${metadata.version} (${metadata.buildNumber})</p>
+    <h1>${escapeHtml(metadata.appName)}</h1>
+    <p class="version">Version ${escapeHtml(metadata.version)} (${escapeHtml(metadata.buildNumber)})</p>
 
     <div class="info">
       <div class="info-item">
         <span class="info-label">Bundle ID</span>
-        <span class="info-value">${metadata.bundleId}</span>
+        <span class="info-value">${escapeHtml(metadata.bundleId)}</span>
       </div>
       <div class="info-item">
         <span class="info-label">Version</span>
-        <span class="info-value">${metadata.version}</span>
+        <span class="info-value">${escapeHtml(metadata.version)}</span>
       </div>
       <div class="info-item">
         <span class="info-label">Build</span>
-        <span class="info-value">${metadata.buildNumber}</span>
+        <span class="info-value">${escapeHtml(metadata.buildNumber)}</span>
       </div>
     </div>
 
