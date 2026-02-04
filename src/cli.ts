@@ -4,6 +4,8 @@ import { program } from 'commander';
 import chalk from 'chalk';
 import { findIPAFile, extractIPAMetadata } from './ipa';
 import path from 'path';
+import fs from 'fs';
+import { exec } from 'child_process';
 
 // serveコマンド
 program
@@ -72,6 +74,86 @@ program
       console.log(chalk.white(`   ${baseUrl}`));
 
       console.log(chalk.gray('\nサーバーを停止するには Ctrl+C を押してください\n'));
+    } catch (error) {
+      console.error(chalk.red(`❌ エラー: ${error instanceof Error ? error.message : error}`));
+      process.exit(1);
+    }
+  });
+
+// watchコマンド
+program
+  .command('watch')
+  .description('ディレクトリ内の複数IPAファイルを監視してOTA配信')
+  .option('--dir <path>', '監視するディレクトリ', process.cwd())
+  .option('--port <number>', 'ポート番号', '3000')
+  .option('--open', 'サーバー起動後にブラウザを開く', false)
+  .action(async (options) => {
+    try {
+      console.log(chalk.cyan('🚀 Quipa Multi-App Server を起動中...'));
+
+      const appsDirectory = path.resolve(options.dir);
+
+      // ディレクトリの存在確認
+      if (!fs.existsSync(appsDirectory)) {
+        console.error(chalk.red(`❌ ディレクトリが見つかりません: ${appsDirectory}`));
+        process.exit(1);
+      }
+
+      if (!fs.statSync(appsDirectory).isDirectory()) {
+        console.error(chalk.red(`❌ 指定されたパスはディレクトリではありません: ${appsDirectory}`));
+        process.exit(1);
+      }
+
+      console.log(chalk.gray(`監視ディレクトリ: ${appsDirectory}`));
+
+      const { startMultiAppServer } = await import('./server');
+      const port = parseInt(options.port, 10);
+
+      console.log(chalk.gray(`HTTPサーバーを起動中... (port: ${port})`));
+
+      const { watcher } = await startMultiAppServer({
+        port,
+        appsDirectory
+      });
+
+      // イベントリスナー設定
+      watcher.on('add', (entry) => {
+        console.log(chalk.green(`✓ アプリ追加: ${entry.metadata.appName} (${entry.slug})`));
+      });
+
+      watcher.on('remove', (entry) => {
+        console.log(chalk.yellow(`- アプリ削除: ${entry.metadata.appName} (${entry.slug})`));
+      });
+
+      watcher.on('change', (entry) => {
+        console.log(chalk.blue(`↻ アプリ更新: ${entry.metadata.appName} (${entry.slug})`));
+      });
+
+      watcher.on('error', (error) => {
+        console.error(chalk.red(`⚠ エラー: ${error.message}`));
+      });
+
+      const baseUrl = `http://localhost:${port}`;
+
+      console.log(chalk.green(`\n✓ サーバー起動完了！`));
+      console.log(chalk.cyan('\n📱 アプリ一覧URL:'));
+      console.log(chalk.white(`   ${baseUrl}`));
+
+      const initialApps = watcher.getApps();
+      if (initialApps.length > 0) {
+        console.log(chalk.gray(`\n検出済みアプリ: ${initialApps.length}件`));
+        initialApps.forEach(app => {
+          console.log(chalk.gray(`  - ${app.metadata.appName} → ${baseUrl}/${app.slug}/`));
+        });
+      }
+
+      // --openオプションでブラウザを開く
+      if (options.open) {
+        exec(`open ${baseUrl}`);
+      }
+
+      console.log(chalk.gray('\nサーバーを停止するには Ctrl+C を押してください'));
+      console.log(chalk.gray('IPAファイルを追加/削除すると自動で反映されます\n'));
     } catch (error) {
       console.error(chalk.red(`❌ エラー: ${error instanceof Error ? error.message : error}`));
       process.exit(1);

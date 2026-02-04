@@ -4,10 +4,16 @@ import path from 'path';
 import escapeHtml from 'escape-html';
 import { generateManifest } from './manifest';
 import { IPAMetadata } from './ipa';
+import { IPAWatcher, AppEntry } from './watcher';
 
 export interface ServerOptions {
   port: number;
   metadata: IPAMetadata;
+}
+
+export interface MultiAppServerOptions {
+  port: number;
+  appsDirectory: string;
 }
 
 /**
@@ -226,6 +232,347 @@ function generateInstallPage(metadata: IPAMetadata, manifestUrl: string): string
       このアプリをインストールするには、Safariブラウザを使用してください。
       インストール後、「設定」→「一般」→「VPNとデバイス管理」から証明書を信頼する必要がある場合があります。
     </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
+/**
+ * 複数アプリ対応HTTPサーバーを起動
+ */
+export function startMultiAppServer(options: MultiAppServerOptions): Promise<{ app: express.Application; watcher: IPAWatcher }> {
+  return new Promise(async (resolve) => {
+    const app = express();
+    const watcher = new IPAWatcher(options.appsDirectory);
+
+    // アプリ一覧ページ
+    app.get('/', (req, res) => {
+      const apps = watcher.getApps();
+      res.send(generateAppListPage(apps));
+    });
+
+    // 個別アプリのインストールページ
+    app.get('/:slug/', (req, res) => {
+      const appEntry = watcher.getApp(req.params.slug);
+      if (!appEntry) {
+        return res.status(404).send(generate404Page());
+      }
+
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      const baseUrl = `${protocol}://${host}`;
+      const manifestUrl = `${baseUrl}/${req.params.slug}/manifest.plist`;
+
+      res.send(generateInstallPage(appEntry.metadata, manifestUrl));
+    });
+
+    // 個別アプリのmanifest.plist
+    app.get('/:slug/manifest.plist', (req, res) => {
+      const appEntry = watcher.getApp(req.params.slug);
+      if (!appEntry) {
+        return res.status(404).send('App not found');
+      }
+
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      const baseUrl = `${protocol}://${host}`;
+
+      const manifestContent = generateManifest({
+        ipaUrl: `${baseUrl}/${req.params.slug}/app.ipa`,
+        bundleId: appEntry.metadata.bundleId,
+        version: appEntry.metadata.version,
+        appName: appEntry.metadata.appName
+      });
+
+      res.setHeader('Content-Type', 'application/xml');
+      res.send(manifestContent);
+    });
+
+    // 個別アプリのIPA配信
+    app.get('/:slug/app.ipa', (req, res) => {
+      const appEntry = watcher.getApp(req.params.slug);
+      if (!appEntry) {
+        return res.status(404).send('App not found');
+      }
+
+      const ipaPath = appEntry.metadata.ipaPath;
+      if (!fs.existsSync(ipaPath)) {
+        return res.status(404).send('IPA file not found');
+      }
+
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(ipaPath)}"`);
+
+      const stream = fs.createReadStream(ipaPath);
+      stream.pipe(res);
+    });
+
+    // watcherを開始
+    await watcher.start();
+
+    app.listen(options.port, () => {
+      resolve({ app, watcher });
+    });
+  });
+}
+
+/**
+ * アプリ一覧ページのHTML生成
+ */
+function generateAppListPage(apps: AppEntry[]): string {
+  const appCards = apps.map(app => `
+    <a href="/${escapeHtml(app.slug)}/" class="app-card">
+      <div class="app-icon">📱</div>
+      <div class="app-info">
+        <h2>${escapeHtml(app.metadata.appName)}</h2>
+        <p class="app-version">v${escapeHtml(app.metadata.version)} (${escapeHtml(app.metadata.buildNumber)})</p>
+        <p class="app-bundle">${escapeHtml(app.metadata.bundleId)}</p>
+      </div>
+    </a>
+  `).join('');
+
+  const emptyMessage = apps.length === 0 ? `
+    <div class="empty-message">
+      <p>IPAファイルがありません</p>
+      <p class="hint">監視ディレクトリに.ipaファイルを配置してください</p>
+    </div>
+  ` : '';
+
+  return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="30">
+  <title>Quipa - アプリ一覧</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      color: white;
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    header p {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 16px;
+    }
+
+    .app-count {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 5px 15px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-top: 10px;
+      color: white;
+      font-size: 14px;
+    }
+
+    .app-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .app-card {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .app-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .app-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      flex-shrink: 0;
+    }
+
+    .app-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .app-info h2 {
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .app-version {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 3px;
+    }
+
+    .app-bundle {
+      font-size: 12px;
+      color: #999;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .empty-message {
+      background: white;
+      border-radius: 15px;
+      padding: 60px 20px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .empty-message p {
+      font-size: 18px;
+      color: #666;
+    }
+
+    .empty-message .hint {
+      font-size: 14px;
+      color: #999;
+      margin-top: 10px;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Quipa</h1>
+      <p>iOS OTA 配信サーバー</p>
+      <span class="app-count">${apps.length} アプリ</span>
+    </header>
+
+    <div class="app-list">
+      ${appCards}
+      ${emptyMessage}
+    </div>
+
+    <footer>
+      <p>30秒ごとに自動更新 | Safariでアクセスしてください</p>
+    </footer>
+  </div>
+</body>
+</html>
+  `;
+}
+
+/**
+ * 404ページのHTML生成
+ */
+function generate404Page(): string {
+  return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アプリが見つかりません</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      font-size: 72px;
+      color: #764ba2;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    a {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 30px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>404</h1>
+    <p>アプリが見つかりません</p>
+    <a href="/">アプリ一覧に戻る</a>
   </div>
 </body>
 </html>
