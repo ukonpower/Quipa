@@ -2,12 +2,17 @@
 
 iOS アプリ（IPA ファイル）を簡単に配信できる CLI ツール
 
-IPA ファイルを置いて `quipa serve` を実行するだけで、iOS デバイスにアプリを OTA（Over-The-Air）インストールできます。
+- **単一アプリ**: `quipa serve` で IPA ファイルを即座に配信
+- **複数アプリ**: `quipa watch` でディレクトリ内の IPA ファイルを監視して配信
+
+iOS デバイスに OTA（Over-The-Air）でアプリをインストールできます。
 
 ## 特徴
 
 - **ゼロコンフィグ**: IPA ファイルを自動検出し、必要な情報を自動で抽出
 - **ワンコマンド**: `quipa serve` だけで配信サーバーを起動
+- **複数アプリ対応**: `quipa watch` で複数アプリを同時ホスティング
+- **ホットリロード**: ファイルの追加・削除・更新を自動検知
 - **シンプル**: 複雑な設定は一切不要
 
 ## インストール
@@ -62,64 +67,117 @@ rm ~/.local/bin/quipa
 
 ## 使い方
 
-### 基本の使い方
+Quipa には 2 つのコマンドがあります：
 
-1. IPA ファイルを任意のディレクトリに配置
-2. そのディレクトリで `quipa serve` を実行
+| コマンド | 用途 |
+|---------|------|
+| `quipa serve` | 単一の IPA ファイルを配信 |
+| `quipa watch` | 複数の IPA ファイルを監視して配信 |
+
+**重要**: iOS の OTA インストールには HTTPS が必須です。ローカル環境で配信する場合は、別途リバースプロキシ（Caddy、nginx など）や HTTPS トンネルツール（ngrok、Cloudflare Tunnel など）を使用して HTTPS 化する必要があります。
+
+---
+
+### `quipa serve` - 単一アプリの配信
+
+1 つの IPA ファイルを配信する最もシンプルな方法です。
 
 ```bash
+# カレントディレクトリの IPA ファイルを自動検出して配信
 quipa serve
-```
 
-これだけで、以下が自動的に実行されます：
-
-- IPA ファイルの検出
-- Info.plist からメタデータ抽出（Bundle ID、アプリ名、バージョン）
-- manifest.plist の自動生成
-- HTTP サーバーの起動
-
-ターミナルに表示される URL にアクセスすると、インストールページが開きます。
-
-**重要**: iOS の OTA インストールには HTTPS が必須です。ローカル環境で配信する場合は、別途リバースプロキシ（Caddy、nginx など）や HTTPS トンネルツール（Cloudflare Tunnel、localhost.run など）を使用して HTTPS 化する必要があります。
-
-### オプション
-
-```bash
-quipa serve [options]
-
-Options:
-  --ipa <path>         IPA ファイルのパス（指定しない場合は自動検出）
-  --port <number>      ポート番号 (デフォルト: 3000)
-  --bundle-id <id>     Bundle ID（IPA から自動取得する場合は不要）
-  --app-name <name>    アプリ名（IPA から自動取得する場合は不要）
-  --version <version>  バージョン（IPA から自動取得する場合は不要）
-  -h, --help           ヘルプを表示
-```
-
-### 例
-
-カレントディレクトリの IPA ファイルを自動検出して配信：
-
-```bash
-quipa serve
-```
-
-特定の IPA ファイルを指定して配信：
-
-```bash
+# 特定の IPA ファイルを指定して配信
 quipa serve --ipa /path/to/MyApp.ipa
-```
 
-ポート番号を指定：
-
-```bash
+# ポート番号を指定
 quipa serve --port 8080
 ```
 
-メタデータを手動で指定：
+#### オプション
+
+| オプション | 説明 | デフォルト |
+|-----------|------|-----------|
+| `--ipa <path>` | IPA ファイルのパス | 自動検出 |
+| `--port <number>` | ポート番号 | 3000 |
+| `--bundle-id <id>` | Bundle ID | IPA から自動取得 |
+| `--app-name <name>` | アプリ名 | IPA から自動取得 |
+| `--version <version>` | バージョン | IPA から自動取得 |
+| `-h, --help` | ヘルプを表示 | - |
+
+---
+
+### `quipa watch` - 複数アプリの配信（推奨）
+
+ディレクトリ内の複数の IPA ファイルを監視し、アプリ一覧ページを提供します。ファイルの追加・削除・更新を自動で検知してリアルタイムに反映します。
 
 ```bash
-quipa serve --ipa MyApp.ipa --bundle-id com.example.app --app-name "My App" --version "1.0.0"
+# カレントディレクトリの IPA ファイルを監視して配信
+quipa watch
+
+# 特定のディレクトリを監視
+quipa watch --dir /path/to/apps
+
+# サーバー起動後にブラウザを自動で開く
+quipa watch --open
+
+# ポート番号を指定
+quipa watch --port 8080
+```
+
+#### オプション
+
+| オプション | 説明 | デフォルト |
+|-----------|------|-----------|
+| `--dir <path>` | 監視するディレクトリ | カレントディレクトリ |
+| `--port <number>` | ポート番号 | 3000 |
+| `--open` | サーバー起動後にブラウザを開く | false |
+| `-h, --help` | ヘルプを表示 | - |
+
+#### 機能
+
+- **アプリ一覧ページ**: ルート URL（`http://localhost:3000`）でアプリ一覧を表示
+- **個別インストールページ**: 各アプリは `/{slug}/` でアクセス可能（例: `http://localhost:3000/myapp-1.0.0/`）
+- **ホットリロード**: IPA ファイルの追加・削除・更新を自動検知
+- **30 秒自動更新**: アプリ一覧ページは 30 秒ごとに自動更新
+
+#### スラッグ（URL パス）の生成規則
+
+IPA ファイル名からスラッグが自動生成されます：
+
+| ファイル名 | スラッグ |
+|-----------|---------|
+| `MyApp-1.0.0.ipa` | `myapp-1.0.0` |
+| `Test App.ipa` | `test-app` |
+
+---
+
+### 使用例
+
+#### 開発チームでの配信
+
+```bash
+# アプリディレクトリを作成
+mkdir -p ~/ios-apps
+
+# IPA ファイルを配置
+cp MyApp-Debug.ipa ~/ios-apps/
+cp MyApp-Release.ipa ~/ios-apps/
+
+# watch モードで起動
+quipa watch --dir ~/ios-apps --open
+
+# 別ターミナルで ngrok を起動して HTTPS 化
+ngrok http 3000
+```
+
+#### CI/CD での配信
+
+```bash
+# ビルド後に IPA を配置
+cp $ARCHIVE_PATH/*.ipa /var/www/ios-apps/
+
+# watch モードでサーバー起動（バックグラウンド）
+quipa watch --dir /var/www/ios-apps --port 3000 &
 ```
 
 ## HTTPS 化について
