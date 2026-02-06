@@ -2,6 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import escapeHtml from 'escape-html';
+import contentDisposition from 'content-disposition';
 import { generateManifest } from './manifest';
 import { IPAMetadata } from './ipa';
 import { IPAWatcher, AppEntry } from './watcher';
@@ -14,6 +15,20 @@ export interface ServerOptions {
 export interface MultiAppServerOptions {
   port: number;
   appsDirectory: string;
+}
+
+/**
+ * IPAファイル用のContent-Dispositionヘッダー値を生成
+ * RFC 2231/5987準拠のエンコーディングを自動適用
+ *
+ * @param ipaPath - IPAファイルのパス
+ * @returns Content-Dispositionヘッダー値
+ */
+function createContentDispositionHeader(ipaPath: string): string {
+  const filename = path.basename(ipaPath);
+  return contentDisposition(filename, {
+    type: 'attachment'
+  });
 }
 
 /**
@@ -32,7 +47,7 @@ export function startServer(options: ServerOptions): Promise<express.Application
       }
 
       res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(ipaPath)}"`);
+      res.setHeader('Content-Disposition', createContentDispositionHeader(ipaPath));
 
       const stream = fs.createReadStream(ipaPath);
       stream.pipe(res);
@@ -302,7 +317,7 @@ export function startMultiAppServer(options: MultiAppServerOptions): Promise<{ a
       }
 
       res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(ipaPath)}"`);
+      res.setHeader('Content-Disposition', createContentDispositionHeader(ipaPath));
 
       const stream = fs.createReadStream(ipaPath);
       stream.pipe(res);

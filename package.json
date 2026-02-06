@@ -38,11 +38,13 @@
     "yauzl": "^2.10.0"
   },
   "devDependencies": {
+    "@types/content-disposition": "^0.5.9",
     "@types/escape-html": "^1.0.4",
     "@types/express": "^4.17.21",
     "@types/node": "^20.10.5",
     "@types/plist": "^3.0.5",
     "@types/yauzl": "^2.10.3",
+    "content-disposition": "^1.0.1",
     "pkg": "^5.8.1",
     "typescript": "^5.3.3"
   }

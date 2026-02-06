@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import path from 'path';
+import crypto from 'crypto';
 import chokidar from 'chokidar';
 import { extractIPAMetadata, IPAMetadata } from './ipa';
 
@@ -11,10 +12,22 @@ export interface AppEntry {
 
 /**
  * IPAファイル名からスラッグを生成
- * 例: MyApp-1.0.0.ipa → myapp-1.0.0
+ * 日本語ファイル名の場合はハッシュ値を使用して一意性を確保
+ * 例: テストアプリ.ipa → a1b2c3d4
+ *     MyApp-1.0.0.ipa → myapp-1.0.0
  */
 export function generateSlug(filename: string): string {
-  return path.basename(filename, '.ipa')
+  const baseName = path.basename(filename, '.ipa');
+  const hasNonAscii = /[^\x00-\x7F]/.test(baseName);
+
+  // 日本語など非ASCII文字が含まれる場合はハッシュを使用
+  if (hasNonAscii) {
+    const hash = crypto.createHash('md5').update(baseName).digest('hex').slice(0, 8);
+    return hash;
+  }
+
+  // ASCII文字のみの場合は従来の処理
+  return baseName
     .toLowerCase()
     .replace(/[^a-z0-9-_.]/g, '-')
     .replace(/-+/g, '-')
